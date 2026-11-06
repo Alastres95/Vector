@@ -31,9 +31,16 @@ const groups = [
     { label: 'Configuración', href: '/configuracion', icon: Settings2 },
   ]},
 ];
+const mobileNavigation = [
+  { label: 'Inicio', href: '/', icon: Home },
+  { label: 'Clientes', href: '/clientes', icon: Users },
+  { label: 'Ventas', href: '/ventas', icon: BriefcaseBusiness },
+  { label: 'Pedidos', href: '/pedidos', icon: PackageCheck },
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
+  const currentPath = location.split('?')[0];
   const [mobileOpen, setMobileOpen] = useState(false);
   const SidebarContent = () => (
     <>
@@ -49,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {groups.map((group) => <div key={group.label}>
           <p className="mb-2 px-3 text-[9px] font-bold tracking-[.15em] text-[#75909a]">{group.label}</p>
           <div className="space-y-1">{group.items.map(({ label, href, icon: Icon }) => {
-            const active = location === href;
+            const active = currentPath === href;
             return <Link key={href} href={href} onClick={() => setMobileOpen(false)} data-testid={`nav-${href === '/' ? 'inicio' : href.slice(1)}`} className={`sidebar-link flex items-center gap-3 rounded-lg px-3 py-[9px] text-[13px] font-medium no-underline ${active ? 'bg-[#00A9A5] text-white shadow-sm shadow-black/10' : 'text-[#a9bec5] hover:bg-white/[.07] hover:text-white'}`}>
               <Icon size={16} strokeWidth={active ? 2.2 : 1.8} /><span>{label}</span>{href === '/incidencias' && <span className="ml-auto rounded-full bg-[#e9a856] px-1.5 py-0.5 text-[9px] font-bold text-[#173744]">2</span>}
             </Link>;
@@ -70,17 +77,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
   return <div className="app-shell flex bg-[#f5f8f9]">
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col overflow-y-auto bg-[#102C3A] px-4 pb-4 lg:flex"><SidebarContent /></aside>
-    {mobileOpen && <div className="fixed inset-0 z-50 bg-[#102c3a]/40 lg:hidden" onClick={() => setMobileOpen(false)}><aside className="flex h-full w-[276px] flex-col overflow-y-auto bg-[#102C3A] px-4 pb-4" onClick={(e) => e.stopPropagation()}><div className="flex justify-end pt-3"><button aria-label="Cerrar menú" data-testid="button-close-menu" onClick={() => setMobileOpen(false)} className="rounded-md p-1 text-white"><X size={20}/></button></div><SidebarContent /></aside></div>}
+    {mobileOpen && <div className="fixed inset-0 z-50 bg-[#102c3a]/40 lg:hidden" onClick={() => setMobileOpen(false)}><aside className="flex h-full w-[276px] flex-col overflow-y-auto bg-[#102C3A] px-4 pb-4" onClick={(e) => e.stopPropagation()}><div className="flex justify-end pt-3"><button aria-label="Cerrar menú" data-testid="button-close-menu" onClick={() => setMobileOpen(false)} className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-white"><X size={20}/></button></div><SidebarContent /></aside></div>}
     <div className="min-w-0 flex-1 lg:ml-[248px]">
       <header className="sticky top-0 z-30 flex h-[66px] items-center justify-between border-b border-[#e6edef] bg-white/95 px-4 backdrop-blur sm:px-7 lg:px-9">
-        <div className="flex items-center gap-3"><button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-[#35515c] hover:bg-[#f0f5f6] lg:hidden" aria-label="Abrir menú" data-testid="button-open-menu"><Menu size={19}/></button><span className="hidden text-[12px] text-[#71838b] sm:block">Panel de gestión</span><span className="hidden h-4 w-px bg-[#dce5e8] sm:block" /><span className="text-[12px] font-semibold text-[#173744]">{groups.flatMap(g => g.items).find(i => i.href === location)?.label ?? 'Vértice'}</span></div>
+        <div className="flex items-center gap-3"><button onClick={() => setMobileOpen(true)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[#35515c] hover:bg-[#f0f5f6] lg:hidden" aria-label="Abrir menú" data-testid="button-open-menu"><Menu size={19}/></button><span className="hidden text-[12px] text-[#71838b] sm:block">Panel de gestión</span><span className="hidden h-4 w-px bg-[#dce5e8] sm:block" /><span className="text-[12px] font-semibold text-[#173744]">{groups.flatMap(g => g.items).find(i => i.href === currentPath)?.label ?? 'Vértice'}</span></div>
         <div className="flex items-center gap-2 sm:gap-4">
           <span className="hidden items-center gap-2 rounded-full border border-[#d5ecea] bg-[#f1fbfa] px-3 py-1.5 text-[10px] font-semibold text-[#147d79] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-[#00A9A5]"/>Datos de demostración</span>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e3f1f0] text-[11px] font-bold text-[#146e6b]">MR</div>
         </div>
       </header>
-      <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-7 sm:py-8 lg:px-9">{children}</main>
+      <main className="mx-auto max-w-[1500px] px-4 py-6 pb-28 sm:px-7 sm:py-8 sm:pb-28 lg:px-9 lg:pb-8">{children}</main>
       <footer className="px-4 pb-5 pt-2 text-center text-[10px] text-[#84939a] sm:px-7 lg:px-9">Vértice Telecom · Entorno de demostración · Sin conexiones a operadores</footer>
     </div>
+    <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[#e4ecee] bg-white/95 px-1 pt-1.5 shadow-[0_-8px_24px_rgba(16,44,58,.06)] backdrop-blur lg:hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+      {mobileNavigation.map(({ label, href, icon: Icon }) => {
+        const active = currentPath === href;
+        return <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={active ? 'page' : undefined} data-testid={`mobile-nav-${href === '/' ? 'inicio' : href.slice(1)}`} className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[9px] font-semibold no-underline ${active ? 'text-[#008f8c]' : 'text-[#71838b]'}`}>
+          <Icon size={18} strokeWidth={active ? 2.3 : 1.8}/><span>{label}</span>
+        </Link>;
+      })}
+      <button type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir todos los módulos" data-testid="button-mobile-menu" className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[9px] font-semibold text-[#71838b]">
+        <Menu size={18}/><span>Más</span>
+      </button>
+    </nav>
   </div>;
 }

@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+:root {
+  --background: 210 25% 98%;
+  --foreground: 202 56% 15%;
+  --border: 207 24% 90%;
+  --card: 0 0% 100%;
+  --card-foreground: 202 56% 15%;
+  --primary: 178 100% 33%;
+  --sidebar: 202 56% 15%;
+  --app-font-sans: 'DM Sans', sans-serif;
+  --app-font-serif: 'Manrope', sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--app-font-sans); background: #f5f8f9; color: #102c3a; }
+button, input, select { font: inherit; }
+.font-display { font-family: var(--app-font-serif); }
+.chart-grid {
+  background-image:
+    linear-gradient(to bottom, transparent calc(25% - 1px), #e9eff1 25%, transparent calc(25% + 1px)),
+    linear-gradient(to bottom, transparent calc(50% - 1px), #e9eff1 50%, transparent calc(50% + 1px)),
+    linear-gradient(to bottom, transparent calc(75% - 1px), #e9eff1 75%, transparent calc(75% + 1px));
+}

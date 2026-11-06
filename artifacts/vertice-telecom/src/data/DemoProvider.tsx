@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { seedData, type CollectionKey, type DemoRecord, type DemoStore } from './demo-data';
+import { demoDate, demoPeriod, seedData, type CollectionKey, type DemoRecord, type DemoStore } from './demo-data';
 
 type DemoRepository = {
   list: <K extends CollectionKey>(collection: K) => DemoStore[K];
@@ -10,12 +10,45 @@ type DemoRepository = {
 };
 const DemoContext = createContext<DemoRepository | null>(null);
 const STORE_KEY = 'vertice-demo-store-v1';
+const legacyDateOffsets: Record<string, number> = {
+  '18/02/2025': 0,
+  '17/02/2025': 1,
+  '15/02/2025': 3,
+  '14/02/2025': 4,
+  '13/02/2025': 5,
+  '12/02/2025': 6,
+  '10/02/2025': 8,
+  '06/02/2025': 12,
+  '03/02/2025': 15,
+  '29/01/2025': 20,
+  '25/01/2025': 24,
+};
+
+const refreshLegacyDate = (value: string) =>
+  value in legacyDateOffsets ? demoDate(legacyDateOffsets[value]) : value;
+
+function migrateStoredDemoData(saved: Partial<DemoStore>): DemoStore {
+  const merged = { ...seedData, ...saved } as DemoStore;
+  return {
+    ...merged,
+    clientes: merged.clientes.map(row => ({ ...row, fechaAlta: refreshLegacyDate(row.fechaAlta) })),
+    ventas: merged.ventas.map(row => ({ ...row, fecha: refreshLegacyDate(row.fecha) })),
+    pedidos: merged.pedidos.map(row => ({ ...row, fecha: refreshLegacyDate(row.fecha) })),
+    contratos: merged.contratos.map(row => ({ ...row, fechaInicio: refreshLegacyDate(row.fechaInicio) })),
+    facturacion: merged.facturacion.map(row => ({ ...row, fecha: refreshLegacyDate(row.fecha) })),
+    incidencias: merged.incidencias.map(row => ({ ...row, fecha: refreshLegacyDate(row.fecha) })),
+    comisiones: merged.comisiones.map(row => ({
+      ...row,
+      periodo: row.periodo === 'Febrero 2025' ? demoPeriod() : row.periodo,
+    })),
+  };
+}
 
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [store, setStore] = useState<DemoStore>(() => {
     try {
       const saved = localStorage.getItem(STORE_KEY);
-      return saved ? { ...seedData, ...JSON.parse(saved) } as DemoStore : seedData;
+      return saved ? migrateStoredDemoData(JSON.parse(saved) as Partial<DemoStore>) : seedData;
     } catch {
       return seedData;
     }

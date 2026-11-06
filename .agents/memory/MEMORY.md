@@ -1,0 +1,1 @@
+- [VÉRTICE TELECOM demo scope](vertice-telecom-demo-scope.md) — keep records fictitious and avoid Supabase/operator integrations until explicitly requested.

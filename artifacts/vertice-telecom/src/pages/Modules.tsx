@@ -1,7 +1,8 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDownToLine, Check, CircleAlert, FilePlus2, Plus, RotateCcw, Search, Settings2, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
-import { Link } from 'wouter';
-import { moduleMeta, seedData, type CollectionKey, type DemoRecord } from '../data/demo-data';
+import { Link, useLocation } from 'wouter';
+import { demoDate, demoPeriod, moduleMeta, seedData, type CollectionKey, type DemoRecord } from '../data/demo-data';
 import { useDemoData } from '../data/DemoProvider';
 
 const money = (value: unknown) => typeof value === 'number' ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value) : String(value ?? '—');
@@ -15,6 +16,8 @@ const statusClass = (value: string) => {
 
 export function ModulePage({ collection }: { collection: CollectionKey }) {
   const repo = useDemoData();
+  const [location] = useLocation();
+  const search = typeof window === 'undefined' ? '' : window.location.search;
   const records = repo.list(collection);
   const meta = moduleMeta[collection];
   const [query, setQuery] = useState('');
@@ -30,8 +33,16 @@ export function ModulePage({ collection }: { collection: CollectionKey }) {
   const openEditor = (record: DemoRecord | 'new') => {
     setDialog(record);
     const template = record === 'new' ? (seedData[collection][0] ?? { id: '' }) : record;
-    setDraft(Object.fromEntries(Object.entries(template).filter(([key]) => key !== 'id').map(([key,value]) => [key, record === 'new' && key !== 'estado' ? '' : String(value)])));
+    setDraft(Object.fromEntries(Object.entries(template).filter(([key]) => key !== 'id').map(([key,value]) => {
+      if (record !== 'new') return [key, String(value)];
+      if (['fecha', 'fechaAlta', 'fechaInicio'].includes(key)) return [key, demoDate()];
+      if (key === 'periodo') return [key, demoPeriod()];
+      return [key, key === 'estado' ? String(value) : ''];
+    })));
   };
+  useEffect(() => {
+    if (new URLSearchParams(search).get('nuevo') === '1') openEditor('new');
+  }, [collection, location, search]);
   const save = (event: FormEvent) => {
     event.preventDefault();
     const editing = dialog !== 'new' && dialog !== null;
@@ -69,26 +80,41 @@ export function ModulePage({ collection }: { collection: CollectionKey }) {
   return <div className="page-enter space-y-6">
     <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
       <div><div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.13em] text-[#82939a]"><span>Gestión</span><span className="text-[#b7c3c7]">/</span><span className="text-[#138c88]">{meta.title}</span></div><h1 className="font-display m-0 text-[29px] font-bold tracking-[-.04em] text-[#102C3A] sm:text-[34px]" data-testid="page-title">{meta.title}</h1><p className="mb-0 mt-1.5 text-[13px] text-[#71828a]">{meta.subtitle}</p></div>
-      <div className="flex items-center gap-2"><span className="hidden items-center gap-1.5 rounded-full border border-[#d6ecea] bg-[#eff9f8] px-2.5 py-1.5 text-[10px] font-semibold text-[#167b78] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-[#00A9A5]"/> Datos de demostración</span><button onClick={() => openEditor('new')} data-testid={`button-create-${collection}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#00A9A5] px-3.5 text-[11px] font-semibold text-white hover:bg-[#008f8c]"><Plus size={15}/> Añadir {meta.singular}</button></div>
+       <div className="flex items-center gap-2"><span className="hidden items-center gap-1.5 rounded-full border border-[#d6ecea] bg-[#eff9f8] px-2.5 py-1.5 text-[10px] font-semibold text-[#167b78] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-[#00A9A5]"/> Datos de demostración</span><button onClick={() => openEditor('new')} data-testid={`button-create-${collection}`} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#00A9A5] px-3.5 text-[11px] font-semibold text-white hover:bg-[#008f8c]"><Plus size={15}/> Añadir {meta.singular}</button></div>
     </div>
     {notice && <div className="flex items-center justify-between rounded-lg border border-[#cce9e6] bg-[#eff9f8] px-4 py-3 text-[11px] font-medium text-[#167b78]" role="status" data-testid="status-notice"><span className="flex items-center gap-2"><Check size={15}/>{notice}</span><button onClick={()=>setNotice('')} aria-label="Cerrar aviso"><X size={14}/></button></div>}
     {collection === 'operadores' && <div className="flex items-start gap-3 rounded-lg border border-[#e6e9dd] bg-[#fcfbf5] px-4 py-3.5"><CircleAlert size={16} className="mt-0.5 shrink-0 text-[#ad8739]"/><p className="m-0 text-[11px] leading-relaxed text-[#786b4e]">Este catálogo es únicamente informativo. No existe conexión ni intercambio de datos con operadores mayoristas.</p></div>}
     <section className="overflow-hidden rounded-xl border border-[#e3eaec] bg-white">
       <div className="flex flex-col justify-between gap-3 border-b border-[#edf1f2] p-4 sm:flex-row sm:items-center sm:px-5">
-        <div className="relative w-full sm:max-w-[320px]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#91a0a5]"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Buscar ${meta.title.toLocaleLowerCase('es')}…`} aria-label={`Buscar ${meta.title}`} data-testid={`input-search-${collection}`} className="h-9 w-full rounded-lg border border-[#e3eaec] bg-[#fbfcfc] pl-9 pr-3 text-[11px] text-[#294752] outline-none placeholder:text-[#a1adb1] focus:border-[#69c8c3] focus:ring-2 focus:ring-[#00a9a5]/10"/></div>
-        <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-1.5 text-[10px] text-[#84949a]"><SlidersHorizontal size={13}/> Estado</div><select value={filter} onChange={e=>setFilter(e.target.value)} data-testid={`select-filter-${collection}`} className="h-9 min-w-[120px] rounded-lg border border-[#e3eaec] bg-white px-3 text-[10px] font-medium text-[#526a73] outline-none focus:border-[#69c8c3]"><option>Todos</option>{states.map(s=><option key={s}>{s}</option>)}</select><span className="ml-auto rounded-md bg-[#f2f6f7] px-2.5 py-1.5 text-[10px] font-medium text-[#71838a]" data-testid={`count-${collection}`}>{visible.length} registros</span></div>
+        <div className="relative w-full sm:max-w-[320px]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#91a0a5]"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Buscar ${meta.title.toLocaleLowerCase('es')}…`} aria-label={`Buscar ${meta.title}`} data-testid={`input-search-${collection}`} className="h-11 w-full rounded-lg border border-[#e3eaec] bg-[#fbfcfc] pl-9 pr-3 text-[11px] text-[#294752] outline-none placeholder:text-[#a1adb1] focus:border-[#69c8c3] focus:ring-2 focus:ring-[#00a9a5]/10 sm:h-9"/></div>
+        <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-1.5 text-[10px] text-[#84949a]"><SlidersHorizontal size={13}/> Estado</div><select value={filter} onChange={e=>setFilter(e.target.value)} data-testid={`select-filter-${collection}`} className="h-11 min-w-[120px] rounded-lg border border-[#e3eaec] bg-white px-3 text-[10px] font-medium text-[#526a73] outline-none focus:border-[#69c8c3] sm:h-9"><option>Todos</option>{states.map(s=><option key={s}>{s}</option>)}</select><span className="ml-auto rounded-md bg-[#f2f6f7] px-2.5 py-1.5 text-[10px] font-medium text-[#71838a]" data-testid={`count-${collection}`}>{visible.length} registros</span></div>
       </div>
-      {visible.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-left"><thead><tr className="border-b border-[#edf1f2] bg-[#f8fafb] text-[9px] font-bold uppercase tracking-[.12em] text-[#84949a]">{meta.columns.map(col=><th key={col.key} className="px-5 py-3 font-semibold">{col.label}</th>)}<th className="w-[110px] px-4 py-3 text-right font-semibold">Acciones</th></tr></thead><tbody>{visible.map((row,index)=><tr key={row.id} data-testid={`row-${collection}-${row.id}`} className="group border-b border-[#f0f3f4] last:border-0 hover:bg-[#fbfdfd]">
+      {visible.length > 0 && <div className="space-y-3 p-3 md:hidden" data-testid={`mobile-records-${collection}`}>
+        {visible.map((row) => {
+          const values = row as Record<string, unknown>;
+          const primary = meta.columns[0];
+          return <article key={row.id} data-testid={`mobile-card-${collection}-${row.id}`} className="rounded-xl border border-[#e3eaec] bg-white p-4 shadow-sm shadow-[#102c3a]/[.025]">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="mb-1 text-[9px] font-semibold uppercase tracking-[.1em] text-[#82939a]">{primary.label}</p><h3 className="m-0 break-words text-[13px] font-bold text-[#173744]">{formatCell(primary.key, values[primary.key])}</h3></div>{values.estado !== undefined && formatCell('estado', values.estado)}</div>
+            <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3">{meta.columns.slice(1).filter(col => col.key !== 'estado').map(col => <div key={col.key} className="min-w-0"><dt className="text-[9px] text-[#8a999f]">{col.label}</dt><dd className="mb-0 mt-0.5 break-words text-[10px] text-[#536b74]">{formatCell(col.key, values[col.key])}</dd></div>)}</dl>
+            <div className="mt-4 flex justify-end gap-2 border-t border-[#edf1f2] pt-3">
+              <button onClick={() => changeStatus(row)} title="Cambiar estado demo" aria-label={`Cambiar estado de ${row.id}`} data-testid={`button-mobile-status-${row.id}`} className="min-h-11 min-w-11 rounded-lg border border-[#dcebe9] text-[#168b87] hover:bg-[#e9f6f4]"><RotateCcw size={15} className="mx-auto"/></button>
+              <button onClick={() => openEditor(row)} title="Editar" aria-label={`Editar ${row.id}`} data-testid={`button-mobile-edit-${row.id}`} className="min-h-11 min-w-11 rounded-lg border border-[#e2e9eb] text-[#56717b] hover:bg-[#edf3f4]"><Settings2 size={15} className="mx-auto"/></button>
+              <button onClick={() => remove(row)} title="Eliminar" aria-label={`Eliminar ${row.id}`} data-testid={`button-mobile-delete-${row.id}`} className="min-h-11 min-w-11 rounded-lg border border-[#f0dddc] text-[#a96c67] hover:bg-[#fbefee]"><X size={16} className="mx-auto"/></button>
+            </div>
+          </article>;
+        })}
+      </div>}
+      {visible.length ? <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[720px] border-collapse text-left"><thead><tr className="border-b border-[#edf1f2] bg-[#f8fafb] text-[9px] font-bold uppercase tracking-[.12em] text-[#84949a]">{meta.columns.map(col=><th key={col.key} className="px-5 py-3 font-semibold">{col.label}</th>)}<th className="w-[110px] px-4 py-3 text-right font-semibold">Acciones</th></tr></thead><tbody>{visible.map((row,index)=><tr key={row.id} data-testid={`row-${collection}-${row.id}`} className="group border-b border-[#f0f3f4] last:border-0 hover:bg-[#fbfdfd]">
         {meta.columns.map((col,colIndex)=><td key={col.key} className={`px-5 py-3.5 text-[11px] ${colIndex===0?'font-semibold text-[#294752]':'text-[#657981]'}`} data-testid={`cell-${collection}-${row.id}-${col.key}`}>{formatCell(col.key,(row as Record<string,unknown>)[col.key])}</td>)}
         <td className="px-4 py-2.5"><div className="flex justify-end gap-1 opacity-60 transition group-hover:opacity-100"><button onClick={()=>changeStatus(row)} title="Cambiar estado demo" aria-label={`Cambiar estado de ${row.id}`} data-testid={`button-status-${row.id}`} className="rounded-md p-1.5 text-[#168b87] hover:bg-[#e9f6f4]"><RotateCcw size={13}/></button><button onClick={()=>openEditor(row)} title="Editar" aria-label={`Editar ${row.id}`} data-testid={`button-edit-${row.id}`} className="rounded-md p-1.5 text-[#56717b] hover:bg-[#edf3f4]"><Settings2 size={13}/></button><button onClick={()=>remove(row)} title="Eliminar" aria-label={`Eliminar ${row.id}`} data-testid={`button-delete-${row.id}`} className="rounded-md p-1.5 text-[#a96c67] hover:bg-[#fbefee]"><X size={14}/></button></div></td>
       </tr>)}</tbody></table></div> : <div className="flex flex-col items-center px-6 py-14 text-center"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eef7f6] text-[#198d88]"><Search size={19}/></span><h3 className="font-display mb-0 mt-4 text-[14px] font-bold text-[#294752]">{records.length ? 'No hay resultados' : `Todavía no hay ${meta.title.toLocaleLowerCase('es')}`}</h3><p className="mb-0 mt-1.5 max-w-[340px] text-[11px] leading-relaxed text-[#829198]">{records.length ? 'Prueba con otro término o cambia el filtro para ver más registros.' : 'Puedes crear un registro ficticio para explorar cómo funciona este módulo.'}</p>{!records.length && <button onClick={()=>openEditor('new')} className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#008f8c]" data-testid={`button-empty-create-${collection}`}><Plus size={14}/> Añadir {meta.singular}</button>}</div>}
       <div className="flex items-center justify-between border-t border-[#edf1f2] bg-[#fcfdfd] px-4 py-3 text-[9px] text-[#98a5aa] sm:px-5"><span>Vista local · datos ficticios</span><span>{visible.length} de {records.length}</span></div>
     </section>
-    {dialog && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#102c3a]/35 p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDialog(null)}}><form onSubmit={save} className="max-h-[90dvh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#dfe8e9] bg-white p-5 shadow-xl shadow-[#102c3a]/15 sm:p-7" data-testid={`form-${collection}`}>
-      <div className="flex items-start justify-between"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#148e89]">{dialog === 'new' ? 'Nuevo registro demo' : 'Edición local'}</span><h2 className="font-display mb-0 mt-1 text-[21px] font-bold text-[#173744]">{dialog === 'new' ? `Añadir ${meta.singular}` : `Editar ${meta.singular}`}</h2><p className="mb-0 mt-1 text-[11px] text-[#819198]">Los cambios solo afectan a esta demostración.</p></div><button type="button" onClick={()=>setDialog(null)} className="rounded-md p-2 text-[#7b8c92] hover:bg-[#f0f4f5]" aria-label="Cerrar formulario" data-testid={`button-close-form-${collection}`}><X size={17}/></button></div>
+    {dialog && createPortal(<div className="fixed inset-0 z-[60] flex items-end justify-center bg-[#102c3a]/45 p-2 sm:items-center sm:p-4" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }} role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDialog(null)}}><form onSubmit={save} className="max-h-[calc(100dvh-12px)] w-full max-w-[560px] overflow-y-auto rounded-t-2xl border border-[#dfe8e9] bg-white p-5 shadow-xl shadow-[#102c3a]/15 sm:max-h-[90dvh] sm:rounded-2xl sm:p-7" data-testid={`form-${collection}`}>
+       <div className="flex items-start justify-between"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#148e89]">{dialog === 'new' ? 'Nuevo registro demo' : 'Edición local'}</span><h2 className="font-display mb-0 mt-1 text-[21px] font-bold text-[#173744]">{dialog === 'new' ? `Añadir ${meta.singular}` : `Editar ${meta.singular}`}</h2><p className="mb-0 mt-1 text-[11px] text-[#819198]">Los cambios solo afectan a esta demostración.</p></div><button type="button" onClick={()=>setDialog(null)} className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-[#7b8c92] hover:bg-[#f0f4f5]" aria-label="Cerrar formulario" data-testid={`button-close-form-${collection}`}><X size={17}/></button></div>
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{Object.entries(draft).map(([key,value])=><label key={key} className="block"><span className="mb-1.5 block text-[10px] font-semibold capitalize text-[#526a73]">{moduleMeta[collection].columns.find(c=>c.key===key)?.label ?? key.replace(/[A-Z]/g, c=>` ${c.toLowerCase()}`)}</span><input value={value} onChange={e=>setDraft(old=>({...old,[key]:e.target.value}))} required={key!== 'estado'} data-testid={`input-edit-${collection}-${key}`} className="h-10 w-full rounded-lg border border-[#dfe7e9] px-3 text-[11px] text-[#294752] outline-none focus:border-[#63c1bc] focus:ring-2 focus:ring-[#00a9a5]/10"/></label>)}</div>
-      <div className="mt-6 flex justify-end gap-2 border-t border-[#edf1f2] pt-4"><button type="button" onClick={()=>setDialog(null)} className="h-9 rounded-lg border border-[#e2e9eb] px-4 text-[11px] font-semibold text-[#64777f] hover:bg-[#f8fafb]" data-testid={`button-cancel-${collection}`}>Cancelar</button><button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#00A9A5] px-4 text-[11px] font-semibold text-white hover:bg-[#008f8c]" data-testid={`button-save-${collection}`}><Check size={14}/> Guardar cambios</button></div>
-    </form></div>}
+       <div className="mt-6 flex justify-end gap-2 border-t border-[#edf1f2] pt-4"><button type="button" onClick={()=>setDialog(null)} className="min-h-11 rounded-lg border border-[#e2e9eb] px-4 text-[11px] font-semibold text-[#64777f] hover:bg-[#f8fafb]" data-testid={`button-cancel-${collection}`}>Cancelar</button><button type="submit" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#00A9A5] px-4 text-[11px] font-semibold text-white hover:bg-[#008f8c]" data-testid={`button-save-${collection}`}><Check size={14}/> Guardar cambios</button></div>
+    </form></div>, document.body)}
   </div>;
 }
 

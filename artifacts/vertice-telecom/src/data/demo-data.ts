@@ -1,5 +1,7 @@
 export type Estado = 'Activo' | 'Pendiente' | 'En curso' | 'Completado' | 'Cancelado' | 'Pagada' | 'Pendiente de pago' | 'Resuelta' | 'Abierta' | 'Aprobada';
-export type Cliente = { id: string; nombre: string; identificadorFiscal: string; contacto: string; email: string; telefono: string; estado: string; comercial: string; fechaAlta: string };
+export type TipoCliente = 'Empresa' | 'Particular';
+export type EstadoCliente = 'Activo' | 'Pendiente' | 'Inactivo';
+export type Cliente = { id: string; tipo: TipoCliente; nombre: string; identificadorFiscal: string; contacto: string; email: string; telefono: string; direccion: string; estado: EstadoCliente; comercial: string; fechaAlta: string };
 export type Operador = { id: string; nombre: string; servicios: string; estado: string };
 export type Tarifa = { id: string; nombre: string; operador: string; servicio: string; precioMensual: number; comision: number; estado: string };
 export type Venta = { id: string; cliente: string; servicio: string; operador: string; importe: number; estado: string; fecha: string; comercial: string };
@@ -37,12 +39,12 @@ export type DemoStore = {
 
 export const seedData: DemoStore = {
   clientes: [
-    { id: 'CLI-1048', nombre: 'Estudio Noroeste, S.L.', identificadorFiscal: 'B-81420576', contacto: 'Lucía Martín', email: 'lucia@estudionoroeste.es', telefono: '+34 611 482 903', estado: 'Activo', comercial: 'Marta Ruiz', fechaAlta: demoDate(6) },
-    { id: 'CLI-1047', nombre: 'Clínica Alameda', identificadorFiscal: 'B-39281406', contacto: 'Javier Ortega', email: 'j.ortega@clinicaalameda.es', telefono: '+34 622 310 784', estado: 'Activo', comercial: 'Diego León', fechaAlta: demoDate(8) },
-    { id: 'CLI-1046', nombre: 'Talleres Bruma', identificadorFiscal: 'B-76019482', contacto: 'Inés Rubio', email: 'ines@talleresbruma.es', telefono: '+34 633 095 221', estado: 'Activo', comercial: 'Marta Ruiz', fechaAlta: demoDate(12) },
-    { id: 'CLI-1045', nombre: 'Pilar Santamaría', identificadorFiscal: '48.326.517-K', contacto: 'Pilar Santamaría', email: 'pilar.santamaria@email.es', telefono: '+34 644 182 561', estado: 'Activo', comercial: 'Álvaro Gil', fechaAlta: demoDate(15) },
-    { id: 'CLI-1044', nombre: 'Grupo Linde', identificadorFiscal: 'A-05824193', contacto: 'Sergio Vidal', email: 'sergio@grupolinde.es', telefono: '+34 655 974 112', estado: 'Pendiente', comercial: 'Diego León', fechaAlta: demoDate(20) },
-    { id: 'CLI-1043', nombre: 'Casa Mistral', identificadorFiscal: 'B-59370281', contacto: 'Noelia Cano', email: 'noelia@casamistral.es', telefono: '+34 666 784 390', estado: 'Activo', comercial: 'Marta Ruiz', fechaAlta: demoDate(24) },
+    { id: 'CLI-1048', tipo: 'Empresa', nombre: 'Estudio Noroeste, S.L.', identificadorFiscal: 'B-81420576', contacto: 'Lucía Martín', email: 'lucia@estudionoroeste.es', telefono: '+34 611 482 903', direccion: 'C/ Alcalá, 118, Madrid', estado: 'Activo', comercial: 'Marta Ruiz', fechaAlta: demoDate(6) },
+    { id: 'CLI-1047', tipo: 'Empresa', nombre: 'Clínica Alameda', identificadorFiscal: 'B-39281406', contacto: 'Javier Ortega', email: 'j.ortega@clinicaalameda.es', telefono: '+34 622 310 784', direccion: 'Av. de la Constitución, 24, Sevilla', estado: 'Activo', comercial: 'Diego León', fechaAlta: demoDate(8) },
+    { id: 'CLI-1046', tipo: 'Empresa', nombre: 'Talleres Bruma', identificadorFiscal: 'B-76019482', contacto: 'Inés Rubio', email: 'ines@talleresbruma.es', telefono: '+34 633 095 221', direccion: 'Pol. Ind. La Vega, nave 6, Valladolid', estado: 'Activo', comercial: 'Marta Ruiz', fechaAlta: demoDate(12) },
+    { id: 'CLI-1045', tipo: 'Particular', nombre: 'Pilar Santamaría', identificadorFiscal: '48.326.517-K', contacto: 'Pilar Santamaría', email: 'pilar.santamaria@email.es', telefono: '+34 644 182 561', direccion: 'Pza. del Pilar, 7, Zaragoza', estado: 'Activo', comercial: 'Álvaro Gil', fechaAlta: demoDate(15) },
+    { id: 'CLI-1044', tipo: 'Empresa', nombre: 'Grupo Linde', identificadorFiscal: 'A-05824193', contacto: 'Sergio Vidal', email: 'sergio@grupolinde.es', telefono: '+34 655 974 112', direccion: 'Av. de Europa, 14, Alcobendas', estado: 'Pendiente', comercial: 'Diego León', fechaAlta: demoDate(20) },
+    { id: 'CLI-1043', tipo: 'Empresa', nombre: 'Casa Mistral', identificadorFiscal: 'B-59370281', contacto: 'Noelia Cano', email: 'noelia@casamistral.es', telefono: '+34 666 784 390', direccion: 'C/ Mayor, 39, Zaragoza', estado: 'Activo', comercial: 'Marta Ruiz', fechaAlta: demoDate(24) },
   ],
   operadores: [
     { id: 'OP-01', nombre: 'Movistar Mayorista', servicios: 'Fibra · Móvil', estado: 'Activo' },

@@ -29,9 +29,20 @@ const refreshLegacyDate = (value: string) =>
 
 function migrateStoredDemoData(saved: Partial<DemoStore>): DemoStore {
   const merged = { ...seedData, ...saved } as DemoStore;
+  const seedClients = new Map(seedData.clientes.map(row => [row.id, row]));
   return {
     ...merged,
-    clientes: merged.clientes.map(row => ({ ...row, fechaAlta: refreshLegacyDate(row.fechaAlta) })),
+    clientes: merged.clientes.map(row => {
+      const seed = seedClients.get(row.id);
+      const tipo = row.tipo ?? seed?.tipo ?? (/^[ABCFGJNPQRSUVW]/i.test(row.identificadorFiscal) ? 'Empresa' : 'Particular');
+      return {
+        ...seed,
+        ...row,
+        tipo,
+        direccion: row.direccion ?? seed?.direccion ?? '',
+        fechaAlta: refreshLegacyDate(row.fechaAlta),
+      };
+    }),
     ventas: merged.ventas.map(row => ({ ...row, fecha: refreshLegacyDate(row.fecha) })),
     pedidos: merged.pedidos.map(row => ({ ...row, fecha: refreshLegacyDate(row.fecha) })),
     contratos: merged.contratos.map(row => ({ ...row, fechaInicio: refreshLegacyDate(row.fechaInicio) })),

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "VÉRTICE TELECOM"
+description = "CRM profesional para una compañía española de telecomunicaciones multimayorista. Incluye dashboard y quince apartados operativos con datos ficticios de demostración, sin conexiones reales ni base de datos; estructura preparada para integrar Supabase más adelante."
+version = "1.0.0"
+id = "artifacts/vertice-telecom"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22695
+
+[services.development]
+run = "pnpm --filter @workspace/vertice-telecom run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vertice-telecom", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vertice-telecom/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22695"
+BASE_PATH = "/"

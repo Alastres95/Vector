@@ -1,17 +1,13 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useParams } from 'wouter';
-import { ArrowLeft, BriefcaseBusiness, Building2, Check, ChevronRight, CircleAlert, Mail, MapPin, Pencil, Phone, Plus, Search, SlidersHorizontal, Trash2, UserRound, Users, X } from 'lucide-react';
+import { Link, useLocation, useParams } from 'wouter';
+import { ArrowLeft, BriefcaseBusiness, Building2, Check, ChevronRight, CircleAlert, FileText, Mail, MapPin, Pencil, Phone, Plus, Search, SlidersHorizontal, Trash2, UserRound, Users, X } from 'lucide-react';
 import { demoDate, type Cliente, type DemoRecord } from '../data/demo-data';
 import { useDemoData } from '../data/DemoProvider';
 
-type ClientKind = 'Empresa' | 'Particular';
 type ClientStatus = 'Activo' | 'Pendiente' | 'Inactivo';
-type ClientRecord = Cliente & {
-  tipo: ClientKind;
-  direccion: string;
-};
-type ClientDraft = Omit<ClientRecord, 'id'>;
+type ClientRecord = Cliente;
+type ClientDraft = Omit<Cliente, 'id'>;
 type DraftKey = keyof ClientDraft;
 
 const statusOptions: ClientStatus[] = ['Activo', 'Pendiente', 'Inactivo'];
@@ -37,6 +33,9 @@ const emptyDraft = (): ClientDraft => ({
   telefono: '',
   email: '',
   direccion: '',
+  codigoPostal: '',
+  provincia: '',
+  observaciones: '',
   comercial: '',
   estado: 'Activo',
   fechaAlta: demoDate(),
@@ -70,6 +69,9 @@ function ClientEditor({ record, commercials, onClose, onSave }: {
     telefono: record.telefono ?? '',
     email: record.email ?? '',
     direccion: record.direccion ?? '',
+    codigoPostal: record.codigoPostal ?? '',
+    provincia: record.provincia ?? '',
+    observaciones: record.observaciones ?? '',
     comercial: record.comercial ?? '',
     estado: normalizeStatus(record.estado ?? 'Activo'),
     fechaAlta: record.fechaAlta ?? demoDate(),
@@ -90,10 +92,12 @@ function ClientEditor({ record, commercials, onClose, onSave }: {
     if (!draft.tipo) next.tipo = 'Selecciona el tipo de cliente.';
     if (!draft.nombre.trim()) next.nombre = draft.tipo === 'Empresa' ? 'Indica la razón social.' : 'Indica el nombre completo.';
     if (!draft.identificadorFiscal.trim()) next.identificadorFiscal = 'El NIF/CIF es obligatorio.';
+    else if (!/^[A-Z0-9 .-]{5,20}$/i.test(draft.identificadorFiscal.trim())) next.identificadorFiscal = 'Revisa el formato del NIF/CIF.';
     if (!draft.telefono.trim()) next.telefono = 'Indica un teléfono de contacto.';
     if (!draft.email.trim()) next.email = 'El correo electrónico es obligatorio.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(draft.email.trim())) next.email = 'Introduce un correo válido, por ejemplo nombre@empresa.es.';
     if (!draft.direccion.trim()) next.direccion = 'Indica la dirección del cliente.';
+    if (draft.codigoPostal.trim() && !/^\d{5}$/.test(draft.codigoPostal.trim())) next.codigoPostal = 'El código postal debe tener cinco dígitos.';
     if (!draft.comercial.trim()) next.comercial = 'Asigna un comercial responsable.';
     if (!draft.estado) next.estado = 'Selecciona un estado.';
     if (draft.tipo === 'Empresa' && !draft.contacto.trim()) next.contacto = 'Indica la persona de contacto.';
@@ -104,7 +108,7 @@ function ClientEditor({ record, commercials, onClose, onSave }: {
     event.preventDefault();
     setSubmitted(true);
     if (!validate()) return;
-    const saved = { ...draft, nombre: draft.nombre.trim(), identificadorFiscal: draft.identificadorFiscal.trim(), telefono: draft.telefono.trim(), email: draft.email.trim(), direccion: draft.direccion.trim(), comercial: draft.comercial.trim(), contacto: draft.tipo === 'Particular' ? draft.nombre.trim() : draft.contacto.trim() };
+    const saved = { ...draft, nombre: draft.nombre.trim(), identificadorFiscal: draft.identificadorFiscal.trim().toUpperCase(), telefono: draft.telefono.trim(), email: draft.email.trim().toLowerCase(), direccion: draft.direccion.trim(), codigoPostal: draft.codigoPostal.trim(), provincia: draft.provincia.trim(), observaciones: draft.observaciones.trim(), comercial: draft.comercial.trim(), contacto: draft.tipo === 'Particular' ? draft.nombre.trim() : draft.contacto.trim() };
     onSave(saved, record?.id);
   };
   const fieldClass = (key: DraftKey) => `min-h-11 w-full rounded-lg border bg-white px-3 text-[12px] text-[#173744] outline-none transition focus:border-[#65c4bd] focus:ring-2 focus:ring-[#00a9a5]/10 ${errors[key] ? 'border-[#d8948e]' : 'border-[#dfe8e9]'}`;
@@ -162,7 +166,13 @@ function ClientEditor({ record, commercials, onClose, onSave }: {
               {draft.tipo === 'Empresa' && renderField('contacto', 'Persona de contacto', 'Nombre de la persona responsable')}
               {renderField('telefono', 'Teléfono', '+34 600 000 000', { type: 'tel', autoComplete: 'tel' })}
               {renderField('email', 'Correo electrónico', 'nombre@empresa.es', { type: 'email', autoComplete: 'email' })}
-              <div className="sm:col-span-2">{renderField('direccion', 'Dirección completa', 'Calle, número, código postal y localidad', { autoComplete: 'street-address' })}</div>
+              <div className="sm:col-span-2">{renderField('direccion', 'Dirección', 'Calle, número y localidad', { autoComplete: 'street-address' })}</div>
+              {renderField('codigoPostal', 'Código postal', '28001', { autoComplete: 'postal-code' })}
+              {renderField('provincia', 'Provincia', 'Madrid', { autoComplete: 'address-level1' })}
+              <label className="block sm:col-span-2">
+                <span className="mb-1.5 block text-[11px] font-semibold text-[#425e67]">Observaciones</span>
+                <textarea value={draft.observaciones} onChange={event => update('observaciones', event.target.value)} rows={3} maxLength={2000} className="min-h-24 w-full resize-y rounded-lg border border-[#dfe8e9] bg-white px-3 py-2.5 text-[12px] text-[#173744] outline-none focus:border-[#65c4bd] focus:ring-2 focus:ring-[#00a9a5]/10" placeholder="Notas internas" />
+              </label>
             </div>
             {draft.tipo === 'Particular' && <p className="mb-0 mt-2 text-[10px] text-[#819198]">La persona de contacto se completará con el nombre del cliente.</p>}
           </section>
@@ -209,12 +219,21 @@ function useClientData() {
 
 export function ClientsPage() {
   const { repo, clients, commercials } = useClientData();
+  const [location] = useLocation();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Todos');
   const [editor, setEditor] = useState<ClientRecord | null | undefined>(undefined);
   const [notice, setNotice] = useState('');
+  const createQueryHandled = useRef(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('nuevo') === '1' && !createQueryHandled.current) {
+      createQueryHandled.current = true;
+      setEditor(null);
+    }
+  }, [location]);
   const visible = useMemo(() => clients.filter(client => {
-    const matchesText = `${client.nombre} ${client.identificadorFiscal}`.toLocaleLowerCase('es').includes(query.trim().toLocaleLowerCase('es'));
+    const searchable = `${client.nombre} ${client.identificadorFiscal} ${client.telefono} ${client.email}`;
+    const matchesText = searchable.toLocaleLowerCase('es').includes(query.trim().toLocaleLowerCase('es'));
     return matchesText && (filter === 'Todos' || normalizeStatus(client.estado) === filter);
   }), [clients, query, filter]);
   const counters = useMemo(() => ({
@@ -248,7 +267,7 @@ export function ClientsPage() {
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div>
         <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.14em] text-[#87979c]"><span>Espacio de trabajo</span><ChevronRight size={12} /><span className="text-[#168b86]">Clientes</span></div>
-        <h1 className="font-display m-0 text-[30px] font-bold tracking-[-.045em] text-[#102C3A] sm:text-[35px]" data-testid="page-title">Clientes</h1>
+        <div className="flex flex-wrap items-center gap-2.5"><h1 className="font-display m-0 text-[30px] font-bold tracking-[-.045em] text-[#102C3A] sm:text-[35px]" data-testid="page-title">Clientes</h1><span className="rounded-full border border-[#d5ecea] bg-[#f1fbfa] px-2.5 py-1 text-[9px] font-semibold text-[#147d79]">Datos de demostración</span></div>
         <p className="mb-0 mt-1.5 text-[12px] text-[#71838a]">Relaciones comerciales y datos de contacto en un solo lugar.</p>
       </div>
       <button onClick={openNew} className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-lg bg-[#00A9A5] px-4 text-[11px] font-semibold text-white shadow-sm shadow-[#00a9a5]/15 transition hover:bg-[#008f8c] active:scale-[.98] sm:self-auto" data-testid="button-create-client"><Plus size={16} /> Añadir cliente</button>
@@ -268,7 +287,7 @@ export function ClientsPage() {
 
     <section className="overflow-hidden rounded-xl border border-[#e1e9eb] bg-white shadow-sm shadow-[#102c3a]/[.02]">
       <div className="flex flex-col justify-between gap-3 border-b border-[#edf1f2] p-4 sm:flex-row sm:items-center sm:px-5">
-        <div className="relative w-full sm:max-w-[350px]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#91a0a5]" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre o NIF/CIF" aria-label="Buscar clientes por nombre o NIF/CIF" className="h-11 w-full rounded-lg border border-[#e2eaec] bg-[#fbfcfc] pl-9 pr-3 text-[11px] text-[#294752] outline-none placeholder:text-[#a1adb1] focus:border-[#69c8c3] focus:ring-2 focus:ring-[#00a9a5]/10" data-testid="input-search-clients" /></div>
+        <div className="relative w-full sm:max-w-[350px]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#91a0a5]" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nombre, NIF/CIF, teléfono o correo" aria-label="Buscar clientes por nombre, NIF/CIF, teléfono o correo" className="h-11 w-full rounded-lg border border-[#e2eaec] bg-[#fbfcfc] pl-9 pr-3 text-[11px] text-[#294752] outline-none placeholder:text-[#a1adb1] focus:border-[#69c8c3] focus:ring-2 focus:ring-[#00a9a5]/10" data-testid="input-search-clients" /></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5 text-[10px] text-[#84949a]"><SlidersHorizontal size={13} /> Estado</span>
           <select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Filtrar clientes por estado" className="min-h-11 min-w-[130px] rounded-lg border border-[#e2eaec] bg-white px-3 text-[10px] font-medium text-[#526a73] outline-none focus:border-[#69c8c3]" data-testid="select-filter-clients">
@@ -282,7 +301,7 @@ export function ClientsPage() {
           <table className="w-full min-w-[780px] border-collapse text-left">
             <thead><tr className="border-b border-[#edf1f2] bg-[#f8fafb] text-[9px] font-bold uppercase tracking-[.12em] text-[#84949a]"><th className="px-5 py-3">Cliente</th><th className="px-4 py-3">NIF/CIF</th><th className="px-4 py-3">Contacto</th><th className="px-4 py-3">Comercial</th><th className="px-4 py-3">Alta</th><th className="px-4 py-3">Estado</th><th className="w-[116px] px-4 py-3 text-right">Acciones</th></tr></thead>
             <tbody>{visible.map(client => <tr key={client.id} className="group border-b border-[#f0f3f4] last:border-0 transition-colors hover:bg-[#fbfdfd]" data-testid={`row-client-${client.id}`}>
-              <td className="px-5 py-3.5"><Link href={`/clientes/${client.id}`} className="flex min-w-0 items-center gap-3 no-underline" data-testid={`link-client-${client.id}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e8f5f3] text-[10px] font-bold text-[#167f7a]">{initials(client.nombre)}</span><span className="min-w-0"><strong className="block truncate text-[11px] font-semibold text-[#21434e] group-hover:text-[#087f7b]">{client.nombre}</strong><span className="mt-0.5 block text-[9px] text-[#95a2a7]">{client.tipo ?? 'Cliente'} · {client.id}</span></span></Link></td>
+               <td className="px-5 py-3.5"><Link href={`/clientes/${client.id}`} className="flex min-w-0 items-center gap-3 no-underline" data-testid={`link-client-${client.id}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e8f5f3] text-[10px] font-bold text-[#167f7a]">{initials(client.nombre)}</span><span className="min-w-0"><strong className="block truncate text-[11px] font-semibold text-[#21434e] group-hover:text-[#087f7b]">{client.nombre}</strong><span className="mt-0.5 block text-[9px] text-[#95a2a7]">{client.tipo ?? 'Cliente'} · Demo · {client.id}</span></span></Link></td>
               <td className="px-4 py-3.5 text-[10px] font-medium text-[#59717a]">{client.identificadorFiscal}</td>
               <td className="px-4 py-3.5"><span className="block text-[10px] font-medium text-[#47616b]">{client.contacto || '—'}</span><span className="mt-0.5 block text-[9px] text-[#8a999f]">{client.email}</span></td>
               <td className="px-4 py-3.5 text-[10px] text-[#59717a]">{client.comercial || '—'}</td>
@@ -298,8 +317,8 @@ export function ClientsPage() {
           </table>
         </div>
         <div className="space-y-3 p-3 md:hidden" data-testid="mobile-client-records">
-          {visible.map(client => <article key={client.id} className="rounded-xl border border-[#e3eaec] bg-white p-4 shadow-sm shadow-[#102c3a]/[.025]" data-testid={`card-client-${client.id}`}>
-            <div className="flex items-start justify-between gap-3"><Link href={`/clientes/${client.id}`} className="flex min-w-0 items-center gap-3 no-underline" data-testid={`mobile-link-client-${client.id}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e8f5f3] text-[10px] font-bold text-[#167f7a]">{initials(client.nombre)}</span><span className="min-w-0"><strong className="block break-words text-[12px] font-semibold text-[#21434e]">{client.nombre}</strong><span className="mt-0.5 block text-[9px] text-[#8a999f]">{client.tipo ?? 'Cliente'} · {client.id}</span></span></Link><StatusPill status={client.estado} /></div>
+           {visible.map(client => <article key={client.id} className="rounded-xl border border-[#e3eaec] bg-white p-4 shadow-sm shadow-[#102c3a]/[.025]" data-testid={`card-client-${client.id}`}>
+             <div className="flex items-start justify-between gap-3"><Link href={`/clientes/${client.id}`} className="flex min-w-0 items-center gap-3 no-underline" data-testid={`mobile-link-client-${client.id}`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e8f5f3] text-[10px] font-bold text-[#167f7a]">{initials(client.nombre)}</span><span className="min-w-0"><strong className="block break-words text-[12px] font-semibold text-[#21434e]">{client.nombre}</strong><span className="mt-0.5 block text-[9px] text-[#8a999f]">{client.tipo ?? 'Cliente'} · Demo · {client.id}</span></span></Link><StatusPill status={client.estado} /></div>
             <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-[#edf1f2] pt-3"><div><dt className="text-[9px] text-[#8a999f]">NIF/CIF</dt><dd className="mb-0 mt-0.5 text-[10px] font-medium text-[#536b74]">{client.identificadorFiscal}</dd></div><div><dt className="text-[9px] text-[#8a999f]">Contacto</dt><dd className="mb-0 mt-0.5 text-[10px] text-[#536b74]">{client.contacto || '—'}</dd></div><div><dt className="text-[9px] text-[#8a999f]">Comercial</dt><dd className="mb-0 mt-0.5 text-[10px] text-[#536b74]">{client.comercial || '—'}</dd></div><div><dt className="text-[9px] text-[#8a999f]">Alta</dt><dd className="mb-0 mt-0.5 text-[10px] text-[#536b74]">{client.fechaAlta || '—'}</dd></div></dl>
             <div className="mt-3 flex justify-end gap-1 border-t border-[#edf1f2] pt-2">
               <Link href={`/clientes/${client.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-[10px] font-semibold text-[#168b87] transition hover:bg-[#e9f6f4]" data-testid={`button-mobile-view-client-${client.id}`}>Ver ficha <ChevronRight size={14} /></Link>
@@ -348,7 +367,12 @@ export function ClientDetailPage() {
     { label: 'Teléfono', value: client.telefono || 'Sin indicar', icon: Phone },
     { label: 'Correo electrónico', value: client.email || 'Sin indicar', icon: Mail },
     { label: 'Dirección', value: client.direccion || 'Sin dirección registrada', icon: MapPin },
+    { label: 'Código postal', value: client.codigoPostal || 'Sin indicar', icon: MapPin },
+    { label: 'Provincia', value: client.provincia || 'Sin indicar', icon: MapPin },
+    { label: 'Observaciones', value: client.observaciones || 'Sin observaciones', icon: FileText },
   ];
+  const relatedContracts = repo.list('contratos').filter(row => row.cliente === client.nombre);
+  const relatedOrders = repo.list('pedidos').filter(row => row.cliente === client.nombre);
   return <div className="page-enter space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <Link href="/clientes" className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-[11px] font-semibold text-[#168b87] no-underline transition hover:bg-[#e9f6f4]" data-testid="link-back-clients"><ArrowLeft size={15} /> Todos los clientes</Link>
@@ -387,6 +411,15 @@ export function ClientDetailPage() {
           <DemoNotice>Esta ficha forma parte del entorno de demostración. Los datos son ficticios y permanecen en el almacenamiento local de este navegador.</DemoNotice>
         </aside>
       </div>
+    </section>
+    <section className="grid gap-4 md:grid-cols-2" aria-label="Asociaciones de demostración">
+      {[
+        { title: 'Contratos asociados · demo', rows: relatedContracts.map(row => `${row.id} · ${row.servicio}`) },
+        { title: 'Pedidos asociados · demo', rows: relatedOrders.map(row => `${row.id} · ${row.servicio}`) },
+      ].map(section => <div key={section.title} className="rounded-xl border border-[#e1e9eb] bg-white p-5">
+        <h2 className="font-display m-0 text-[14px] font-bold text-[#173744]">{section.title}</h2>
+        {section.rows.length ? <ul className="mb-0 mt-3 space-y-2 pl-4 text-[10px] text-[#60747c]">{section.rows.map(row => <li key={row}>{row}</li>)}</ul> : <p className="mb-0 mt-2 text-[10px] text-[#87969b]">No hay registros vinculados en la muestra.</p>}
+      </div>)}
     </section>
     {editor && <ClientEditor record={client} commercials={commercials} onClose={() => setEditor(false)} onSave={save} />}
   </div>;

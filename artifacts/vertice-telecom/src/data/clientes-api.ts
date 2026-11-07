@@ -12,6 +12,9 @@ type ClienteRow = {
   email: string;
   telefono: string;
   direccion: string;
+  codigo_postal: string;
+  provincia: string;
+  observaciones: string;
   comercial: string;
   estado: EstadoCliente;
   created_at: string;
@@ -34,6 +37,9 @@ const mapRow = (row: ClienteRow): Cliente => ({
   email: row.email,
   telefono: row.telefono,
   direccion: row.direccion,
+  codigoPostal: row.codigo_postal,
+  provincia: row.provincia,
+  observaciones: row.observaciones,
   comercial: row.comercial,
   estado: row.estado,
   fechaAlta: row.created_at
@@ -49,18 +55,25 @@ const toRow = (input: ClienteInput) => ({
   email: input.email.trim().toLowerCase(),
   telefono: input.telefono.trim(),
   direccion: input.direccion.trim(),
+  codigo_postal: input.codigoPostal.trim(),
+  provincia: input.provincia.trim(),
+  observaciones: input.observaciones.trim(),
   comercial: input.comercial.trim(),
   estado: input.estado,
 });
 
-const throwIfError = (error: { message: string } | null) => {
-  if (error) throw new Error(error.message);
+const throwIfError = (error: { message: string; code?: string } | null) => {
+  if (error) {
+    const failure = new Error(error.message);
+    failure.name = error.code ?? 'SupabaseOperationError';
+    throw failure;
+  }
 };
 
 export async function listSupabaseClientes(client: SupabaseClient): Promise<Cliente[]> {
   const { data, error } = await client
     .from('clientes')
-    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,comercial,estado,created_at')
+    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,codigo_postal,provincia,observaciones,comercial,estado,created_at')
     .order('created_at', { ascending: false });
   throwIfError(error);
   return ((data ?? []) as ClienteRow[]).map(mapRow);
@@ -69,7 +82,7 @@ export async function listSupabaseClientes(client: SupabaseClient): Promise<Clie
 export async function getSupabaseCliente(client: SupabaseClient, id: string): Promise<Cliente | null> {
   const { data, error } = await client
     .from('clientes')
-    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,comercial,estado,created_at')
+    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,codigo_postal,provincia,observaciones,comercial,estado,created_at')
     .eq('id', id)
     .maybeSingle();
   throwIfError(error);
@@ -88,7 +101,7 @@ export async function createSupabaseCliente(
       organization_id: organizationIdFor(user),
       created_by: user.id,
     })
-    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,comercial,estado,created_at')
+    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,codigo_postal,provincia,observaciones,comercial,estado,created_at')
     .single();
   throwIfError(error);
   return mapRow(data as ClienteRow);
@@ -103,14 +116,19 @@ export async function updateSupabaseCliente(
     .from('clientes')
     .update({ ...toRow(input), updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,comercial,estado,created_at')
+    .select('id,tipo_cliente,nombre,nif_cif,nombre_contacto,email,telefono,direccion,codigo_postal,provincia,observaciones,comercial,estado,created_at')
     .single();
   throwIfError(error);
   return mapRow(data as ClienteRow);
 }
 
-export async function deleteSupabaseCliente(client: SupabaseClient, id: string): Promise<void> {
-  const { data, error } = await client.from('clientes').delete().eq('id', id).select('id').maybeSingle();
+export async function archiveSupabaseCliente(client: SupabaseClient, id: string): Promise<void> {
+  const { data, error } = await client
+    .from('clientes')
+    .update({ estado: 'Inactivo', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
   throwIfError(error);
   if (!data) throw new Error('El cliente no existe o no está disponible para este usuario.');
 }

@@ -40,6 +40,9 @@ function migrateStoredDemoData(saved: Partial<DemoStore>): DemoStore {
         ...row,
         tipo,
         direccion: row.direccion ?? seed?.direccion ?? '',
+        codigoPostal: row.codigoPostal ?? seed?.codigoPostal ?? '',
+        provincia: row.provincia ?? seed?.provincia ?? '',
+        observaciones: row.observaciones ?? seed?.observaciones ?? '',
         fechaAlta: refreshLegacyDate(row.fechaAlta),
       };
     }),

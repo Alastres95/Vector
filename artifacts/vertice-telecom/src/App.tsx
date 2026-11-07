@@ -9,6 +9,7 @@ import { AppShell } from './components/AppShell';
 import { DemoProvider } from './data/DemoProvider';
 import { Dashboard } from './pages/Dashboard';
 import { ModulePage, ReportsPage, SettingsPage } from './pages/Modules';
+import { ClientsWorkspace } from './pages/ClientsWorkspace';
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,8 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/clientes"><ModulePage collection="clientes" /></Route>
+        <Route path="/clientes/:id"><ClientsWorkspace /></Route>
+        <Route path="/clientes"><ClientsWorkspace /></Route>
         <Route path="/operadores"><ModulePage collection="operadores" /></Route>
         <Route path="/tarifas"><ModulePage collection="tarifas" /></Route>
         <Route path="/ventas"><ModulePage collection="ventas" /></Route>
